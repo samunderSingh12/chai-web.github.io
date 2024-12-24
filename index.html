@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat with AI</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #d4fc79, #96e6a1);
+      color: #333;
+    }
+    #chat-container {
+      max-width: 500px;
+      width: 100%;
+      margin: 20px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #messages {
+      padding: 20px;
+      flex-grow: 1;
+      height: 400px;
+      overflow-y: auto;
+      background-color: #f0fdf4;
+    }
+    .message {
+      margin-bottom: 14px;
+    }
+    .message.user {
+      text-align: right;
+    }
+    .message.ai {
+      text-align: left;
+    }
+    .message p {
+      display: inline-block;
+      padding: 14px 20px;
+      border-radius: 25px;
+      max-width: 70%;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+    .message.user p {
+      background-color: #48bb78;
+      color: #ffffff;
+    }
+    .message.ai p {
+      background-color: #e6fffa;
+      color: #2f855a;
+    }
+    #input-container {
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      background: #ffffff;
+      border-top: 1px solid #d2d6dc;
+    }
+    #scenario-input {
+      margin-bottom: 12px;
+      padding: 14px;
+      border: 1px solid #cbd5e0;
+      border-radius: 12px;
+      font-size: 14px;
+      background-color: #f8fafc;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    #scenario-input:focus {
+      border-color: #81e6d9;
+      box-shadow: 0 0 8px rgba(129, 230, 217, 0.6);
+    }
+    #user-input {
+      flex-grow: 1;
+      padding: 14px;
+      border: 1px solid #cbd5e0;
+      border-radius: 12px;
+      font-size: 14px;
+      background-color: #f8fafc;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    #user-input:focus {
+      border-color: #81e6d9;
+      box-shadow: 0 0 8px rgba(129, 230, 217, 0.6);
+    }
+    #send-button {
+      padding: 14px;
+      margin-top: 12px;
+      background: linear-gradient(135deg, #38b2ac, #319795);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #send-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+    }
+    #api-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #api-popup h3 {
+      margin-bottom: 12px;
+    }
+    #api-popup input {
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    #api-popup button {
+      padding: 10px 20px;
+      background: #38b2ac;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-container">
+      <textarea id="scenario-input" placeholder="Describe the scenario or roleplay setting..."></textarea>
+      <input type="text" id="user-input" placeholder="Type your message here...">
+      <button id="send-button">Send</button>
+    </div>
+  </div>
+
+  <div id="api-popup">
+    <h3>Enter Your API Key</h3>
+    <input type="text" id="api-key-input" placeholder="API Key">
+    <button id="api-submit-button">Submit</button>
+  </div>
+
+  <script>
+    const messagesContainer = document.getElementById('messages');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const scenarioInput = document.getElementById('scenario-input');
+    const apiPopup = document.getElementById('api-popup');
+    const apiKeyInput = document.getElementById('api-key-input');
+    const apiSubmitButton = document.getElementById('api-submit-button');
+
+    let apiKey = '';
+
+    function addMessage(role, content) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', role);
+      const messageContent = document.createElement('p');
+      messageContent.textContent = content;
+      messageDiv.appendChild(messageContent);
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showApiPopup() {
+      apiPopup.style.display = 'flex';
+    }
+
+    apiSubmitButton.addEventListener('click', () => {
+      apiKey = apiKeyInput.value.trim();
+      if (apiKey) {
+        apiPopup.style.display = 'none';
+      }
+    });
+
+    async function sendMessage() {
+      const userMessage = userInput.value.trim();
+      const scenario = scenarioInput.value.trim();
+      if (!userMessage || !apiKey) {
+        if (!apiKey) showApiPopup();
+        return;
+      }
+
+      addMessage('user', userMessage);
+      userInput.value = '';
+
+      const options = {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'X-API_KEY': apiKey,
+        },
+        body: JSON.stringify({
+          model: 'chai_v1',
+          messages: [
+            { role: 'system', content: scenario },
+            { role: 'user', content: userMessage }
+          ],
+        }),
+      };
+
+      try {
+        const response = await fetch('https://api.chai-research.com/v1/chat/completions', options);
+        const data = await response.json();
+        const aiMessage = data.choices[0].message.content || 'Sorry, I could not respond.';
+        addMessage('ai', aiMessage);
+      } catch (error) {
+        console.error(error);
+        addMessage('ai', 'There was an error. Please try again later.');
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Show API popup on page load
+    showApiPopup();
+  </script>
+</body>
+</html>
